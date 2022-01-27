@@ -20,6 +20,7 @@ type Client interface {
 	UpdateOrganization(id string, organization *Organization) error
 	DeleteOrganization(name string) error
 
+	GetUsers(orgId string) ([]User, error)
 	GetUser(id string, orgId string) (*User, error)
 	CreateUser(newUser User) (*User, error)
 	UpdateUser(id string, user *User) error
@@ -656,6 +657,30 @@ func (c client) DeleteRouteFromServer(serverId string, route Route) error {
 	}
 
 	return nil
+}
+
+func (c client) GetUsers(orgId string) ([]User, error) {
+	url := fmt.Sprintf("/user/%s", orgId)
+	req, err := http.NewRequest("GET", url, nil)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("GetUsers: Error on HTTP request: %s", err)
+	}
+	defer resp.Body.Close()
+
+	body, _ := ioutil.ReadAll(resp.Body)
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("Non-200 response on getting users\nbody=%s", body)
+	}
+
+	var users []User
+	err = json.Unmarshal(body, &users)
+	if err != nil {
+		return nil, fmt.Errorf("GetUsers: %s: %+v, id=%s, body=%s", err, users, orgId, body)
+	}
+
+	return users, nil
 }
 
 func (c client) GetUser(id string, orgId string) (*User, error) {
